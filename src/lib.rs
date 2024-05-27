@@ -146,39 +146,39 @@ impl Db {
     }
 
     fn try_from_buffer_gzip(buffer: &[u8]) -> Result<Self> {
-        Self::try_from_buffer_tar(buffer)
+        todo!()
     }
 
     fn try_from_buffer_bzip2(buffer: &[u8]) -> Result<Self> {
-        Self::try_from_buffer_tar(buffer)
+        todo!()
     }
 
     fn try_from_buffer_xz(buffer: &[u8]) -> Result<Self> {
-        Self::try_from_buffer_tar(buffer)
+        todo!()
     }
 
     fn try_from_buffer_zstd(buffer: &[u8]) -> Result<Self> {
-        Self::try_from_buffer_tar(buffer)
+        todo!()
     }
 
     fn try_from_buffer_lrzip(buffer: &[u8]) -> Result<Self> {
-        Self::try_from_buffer_tar(buffer)
+        todo!()
     }
 
     fn try_from_buffer_lzop(buffer: &[u8]) -> Result<Self> {
-        Self::try_from_buffer_tar(buffer)
+        todo!()
     }
 
     fn try_from_buffer_lzw(buffer: &[u8]) -> Result<Self> {
-        Self::try_from_buffer_tar(buffer)
+        todo!()
     }
 
     fn try_from_buffer_lz4(buffer: &[u8]) -> Result<Self> {
-        Self::try_from_buffer_tar(buffer)
+        todo!()
     }
 
     fn try_from_buffer_lzip(buffer: &[u8]) -> Result<Self> {
-        Self::try_from_buffer_tar(buffer)
+        todo!()
     }
 
     fn try_from_buffer_any(buffer: &[u8]) -> Result<Self> {
