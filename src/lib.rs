@@ -296,7 +296,6 @@ impl Package {
 
     fn try_from_reader<R: Read>(reader: R) -> Result<Self> {
         Self::try_from_buffer(&buffer_try_from_reader(reader)?)
-
     }
 
     fn try_from_tar_entry(entry: tar::Entry<&[u8]>) -> Result<Self> {
@@ -304,9 +303,13 @@ impl Package {
     }
 }
 
+#[cfg(feature = "db_gz")]
 const MAGIC_GZIP: [u8; 2] = [0x1f, 0x8b];
+#[cfg(feature = "db_bz2")]
 const MAGIC_BZIP2: [u8; 3] = [0x42, 0x5a, 0x68]; // BZh
+#[cfg(feature = "db_xz")]
 const MAGIC_XZ: [u8; 6] = [0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]; // 0xfd + 7zXZ + \0
+#[cfg(feature = "db_zst")]
 const MAGIC_ZSTD: [u8; 4] = [0x28, 0xb5, 0x2f, 0xfd]; 
 const MAGIC_LRZIP: [u8; 4] = [0x4c, 0x52, 0x5a, 0x49]; // LRZI
 const MAGIC_LZOP: [u8; 4] = [0x89, 0x4c, 0x5a, 0x4f]; // 0x89 + LZO
@@ -316,13 +319,8 @@ const MAGIC_LZIP: [u8; 4] = [0x4c, 0x5a, 0x49, 0x50]; // LZIP
 const MAGIC_TAR_PREFIX: [u8; 5] = [0x75, 0x73, 0x74, 0x61, 0x72]; // "ustar"
 const MAGIC_TAR_SUFFIX_BSD: [u8; 3] = [0x00, 0x30, 0x30]; // "\0""00"
 const MAGIC_TAR_SUFFIX_GNU: [u8; 3] = [0x20, 0x20, 0x00]; // "  \0"
-const MAGIC_TAR_BSD: [u8; 8] = [0x75, 0x73, 0x74, 0x61, 0x72, 0x00, 0x30, 0x30]; // "ustar\0  "
-const MAGIC_TAR_GNU: [u8; 8] = [0x75, 0x73, 0x74, 0x61, 0x72, 0x20, 0x20, 0x00]; // "ustar\0  "
-
-fn buffer_try_decompress(buffer: &[u8]) -> Result<Vec<u8>> {
-    /// Magic:
-    Ok(Default::default())
-}
+const _MAGIC_TAR_BSD: [u8; 8] = [0x75, 0x73, 0x74, 0x61, 0x72, 0x00, 0x30, 0x30]; // "ustar\0  "
+const _MAGIC_TAR_GNU: [u8; 8] = [0x75, 0x73, 0x74, 0x61, 0x72, 0x20, 0x20, 0x00]; // "ustar\0  "
 
 fn is_buffer_tar(buffer: &[u8]) -> bool {
     if buffer.len() < 512 || buffer[257..262] != MAGIC_TAR_PREFIX ||
@@ -394,6 +392,7 @@ impl Db {
         Ok(db)
     }
 
+    #[cfg(feature = "db_gz")]
     fn try_from_buffer_gzip(buffer: &[u8]) -> Result<Self> {
         let mut new_buffer = Vec::new();
         match flate2::read::GzDecoder::new(buffer)
@@ -410,6 +409,7 @@ impl Db {
         }
     }
 
+    #[cfg(feature = "db_bz2")]
     fn try_from_buffer_bzip2(buffer: &[u8]) -> Result<Self> {
         let mut new_buffer = Vec::new();
         let mut decoder = bzip2::read::BzDecoder::new(buffer);
@@ -425,6 +425,7 @@ impl Db {
         }
     }
 
+    #[cfg(feature = "db_xz")]
     fn try_from_buffer_xz(buffer: &[u8]) -> Result<Self> {
         let mut new_buffer = Vec::new();
         let mut wrapped_buffer = BufReader::new(buffer);
@@ -439,6 +440,7 @@ impl Db {
         }
     }
 
+    #[cfg(feature = "db_zst")]
     fn try_from_buffer_zstd(buffer: &[u8]) -> Result<Self> {
         match zstd::decode_all(buffer) {
             Ok(buffer) => Self::try_from_buffer_tar(&buffer),
@@ -479,11 +481,13 @@ impl Db {
         }
         // Magic of all compressed formats are mutually exclusive
         if buffer.len() >= 6 {
+            #[cfg(feature = "db_xz")]
             if buffer[0..6] == MAGIC_XZ {
                 return Self::try_from_buffer_xz(buffer)
             }
         }
         if buffer.len() >= 4 {
+            #[cfg(feature = "db_zst")]
             if buffer[0..4] == MAGIC_ZSTD {
                 return Self::try_from_buffer_zstd(buffer)
             } 
@@ -501,11 +505,13 @@ impl Db {
             }
         }
         if buffer.len() >= 3 {
+            #[cfg(feature = "db_bz2")]
             if buffer[0..3] == MAGIC_BZIP2 {
                 return Self::try_from_buffer_bzip2(buffer)
             }
         }
         if buffer.len() >= 2 {
+            #[cfg(feature = "db_gz")]
             if buffer[0..2] == MAGIC_GZIP {
                 return Self::try_from_buffer_gzip(buffer)
             }
