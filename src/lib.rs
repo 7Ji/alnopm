@@ -394,7 +394,19 @@ impl Db {
     }
 
     fn try_from_buffer_gzip(buffer: &[u8]) -> Result<Self> {
-        todo!()
+        let mut new_buffer = Vec::new();
+        match flate2::read::GzDecoder::new(buffer)
+            .read_to_end(&mut new_buffer) 
+        {
+            Ok(size) => {
+                log::debug!("Decompressed {} bytes from .gz", size);
+                Self::try_from_buffer_tar(&new_buffer)
+            },
+            Err(e) => {
+                log::error!("Failed to decompress gzip: {}", e);
+                Err(e.into())
+            },
+        }
     }
 
     fn try_from_buffer_bzip2(buffer: &[u8]) -> Result<Self> {
