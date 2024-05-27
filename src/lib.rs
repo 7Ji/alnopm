@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::{read_dir, File}, io::{Read, Seek}, os::unix::raw::time_t, path::{Path, PathBuf}};
+use std::{collections::HashMap, fs::{read_dir, File}, io::{BufReader, Read, Seek}, os::unix::raw::time_t, path::{Path, PathBuf}};
 
 use base64::Engine;
 use hex::FromHex;
@@ -74,6 +74,7 @@ pub enum Error {
     FromHexError(hex::FromHexError),
     Base64DecodeError(base64::DecodeError),
     PkgbuildRsError(pkgbuild::Error),
+    LzmaError(lzma_rs::error::Error),
 }
 
 macro_rules! impl_from_error {
@@ -91,7 +92,7 @@ impl_from_error!(std::num::ParseIntError, ParseIntError);
 impl_from_error!(hex::FromHexError, FromHexError);
 impl_from_error!(base64::DecodeError, Base64DecodeError);
 impl_from_error!(pkgbuild::Error, PkgbuildRsError);
-
+impl_from_error!(lzma_rs::error::Error, LzmaError);
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -414,7 +415,17 @@ impl Db {
     }
 
     fn try_from_buffer_xz(buffer: &[u8]) -> Result<Self> {
-        todo!()
+        let mut new_buffer = Vec::new();
+        let mut wrapped_buffer = BufReader::new(buffer);
+        match lzma_rs::xz_decompress(
+            &mut wrapped_buffer, &mut new_buffer
+        ) {
+            Ok(_) => Self::try_from_buffer_tar(&new_buffer),
+            Err(e) => {
+                log::error!("Failed to decompress xz: {}", e);
+                Err(e.into())
+            },
+        }
     }
 
     fn try_from_buffer_zstd(buffer: &[u8]) -> Result<Self> {
