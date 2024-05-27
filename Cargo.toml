@@ -9,6 +9,7 @@ flate2 = "1.0.30"
 hex = "0.4.3"
 log = "0.4.21"
 tar = "0.4"
+zstd = "0.13.1"
 
 
 [dependencies.pkgbuild]

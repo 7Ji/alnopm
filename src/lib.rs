@@ -418,7 +418,13 @@ impl Db {
     }
 
     fn try_from_buffer_zstd(buffer: &[u8]) -> Result<Self> {
-        todo!()
+        match zstd::decode_all(buffer) {
+            Ok(buffer) => Self::try_from_buffer_tar(&buffer),
+            Err(e) => {
+                log::error!("Failed to decompress zstd: {}", e);
+                Err(e.into())
+            },
+        }
     }
 
     fn try_from_buffer_lrzip(buffer: &[u8]) -> Result<Self> {
