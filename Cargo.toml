@@ -4,5 +4,20 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+base64 = "0.22.1"
+flate2 = "1.0.30"
+hex = "0.4.3"
 log = "0.4.21"
 tar = "0.4"
+
+
+[dependencies.pkgbuild]
+version = "0.1"
+git = "https://github.com/7Ji/pkgbuild-rs"
+default-features = false
+features = []
+
+
+[[example]]
+name = "dump"
+path = "examples/dump.rs"
