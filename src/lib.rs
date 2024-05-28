@@ -457,16 +457,24 @@ impl Db {
         }
     }
 
+
+    /// Todo: Port from libarchive:
+    /// https://github.com/libarchive/libarchive/blob/master/libarchive/archive_read_support_filter_lrzip.c
     #[cfg(feature = "db_lrz")]
     fn try_from_buffer_lrzip(buffer: &[u8]) -> Result<Self> {
+
         todo!()
     }
 
+    /// Todo: Port from libarchive:
+    /// https://github.com/libarchive/libarchive/blob/master/libarchive/archive_read_support_filter_lzop.c
     #[cfg(feature = "db_lzo")]
     fn try_from_buffer_lzop(buffer: &[u8]) -> Result<Self> {
         todo!()
     }
 
+    /// Todo: Port from libarchive:
+    /// https://github.com/libarchive/libarchive/blob/master/libarchive/archive_read_support_filter_compress.c
     #[cfg(feature = "db_Z")]
     fn try_from_buffer_lzw(buffer: &[u8]) -> Result<Self> {
         todo!()
@@ -490,6 +498,7 @@ impl Db {
         }
     }
 
+    /// Todo: Add lzip support to lzma-rs
     #[cfg(feature = "db_lz")]
     fn try_from_buffer_lzip(buffer: &[u8]) -> Result<Self> {
         todo!()
