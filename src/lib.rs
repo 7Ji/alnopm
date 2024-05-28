@@ -66,18 +66,23 @@ pub struct Db {
     pub packages: Vec<Package>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Error {
-    IoError(std::io::Error),
+    /// Collapsed IO Error
+    IoError(String), 
     BrokenDB,
     DuplicatedDB,
     ParseIntError(std::num::ParseIntError),
     FromHexError(hex::FromHexError),
     Base64DecodeError(base64::DecodeError),
     PkgbuildRsError(pkgbuild::Error),
-    LzmaError(lzma_rs::error::Error),
+    #[cfg(feature = "db_xz")]
+    /// Collapsed LZMA Error
+    LzmaError(String),
     DecompressorNotImplemented(&'static str),
 }
+
+impl std::error::Error for Error {}
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -111,13 +116,23 @@ macro_rules! impl_from_error {
     };
 }
 
-impl_from_error!(std::io::Error, IoError);
 impl_from_error!(std::num::ParseIntError, ParseIntError);
 impl_from_error!(hex::FromHexError, FromHexError);
 impl_from_error!(base64::DecodeError, Base64DecodeError);
 impl_from_error!(pkgbuild::Error, PkgbuildRsError);
+
+impl From<std::io::Error> for Error {
+    fn from(value: std::io::Error) -> Self {
+        Self::IoError(format!("{}", value))
+    }
+}
+
 #[cfg(feature = "db_xz")]
-impl_from_error!(lzma_rs::error::Error, LzmaError);
+impl From<lzma_rs::error::Error> for Error {
+    fn from(value: lzma_rs::error::Error) -> Self {
+        Self::LzmaError(format!("{}", value))
+    }
+}
 
 pub type Result<T> = std::result::Result<T, Error>;
 
