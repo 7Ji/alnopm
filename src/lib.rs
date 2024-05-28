@@ -1,4 +1,4 @@
-use std::{collections::HashMap, default, fs::{read_dir, File}, io::{BufReader, Read}, path::Path};
+use std::{collections::HashMap, fs::{read_dir, File}, io::{BufReader, Read}, path::Path};
 
 use base64::Engine;
 use hex::FromHex;
@@ -75,7 +75,8 @@ pub enum Error {
     FromHexError(hex::FromHexError),
     Base64DecodeError(base64::DecodeError),
     PkgbuildRsError(pkgbuild::Error),
-    LzmaError(lzma_rs::error::Error)
+    LzmaError(lzma_rs::error::Error),
+    DecompressorNotImplementedError,
 }
 
 macro_rules! impl_from_error {
@@ -326,8 +327,8 @@ const MAGIC_LZIP: [u8; 4] = [0x4c, 0x5a, 0x49, 0x50]; // LZIP
 const MAGIC_TAR_PREFIX: [u8; 5] = [0x75, 0x73, 0x74, 0x61, 0x72]; // "ustar"
 const MAGIC_TAR_SUFFIX_BSD: [u8; 3] = [0x00, 0x30, 0x30]; // "\0""00"
 const MAGIC_TAR_SUFFIX_GNU: [u8; 3] = [0x20, 0x20, 0x00]; // "  \0"
-const _MAGIC_TAR_BSD: [u8; 8] = [0x75, 0x73, 0x74, 0x61, 0x72, 0x00, 0x30, 0x30]; // "ustar\0  "
-const _MAGIC_TAR_GNU: [u8; 8] = [0x75, 0x73, 0x74, 0x61, 0x72, 0x20, 0x20, 0x00]; // "ustar\0  "
+const _MAGIC_TAR_BSD: [u8; 8] = [0x75, 0x73, 0x74, 0x61, 0x72, 0x00, 0x30, 0x30]; // "ustar\0""00"
+const _MAGIC_TAR_GNU: [u8; 8] = [0x75, 0x73, 0x74, 0x61, 0x72, 0x20, 0x20, 0x00]; // "ustar  \0"
 
 fn is_buffer_tar(buffer: &[u8]) -> bool {
     if buffer.len() < 512 || buffer[257..262] != MAGIC_TAR_PREFIX ||
@@ -458,27 +459,25 @@ impl Db {
         }
     }
 
-
     /// Todo: Port from libarchive:
     /// https://github.com/libarchive/libarchive/blob/master/libarchive/archive_read_support_filter_lrzip.c
     #[cfg(feature = "db_lrz")]
-    fn try_from_buffer_lrzip(buffer: &[u8]) -> Result<Self> {
-
-        todo!()
+    fn try_from_buffer_lrzip(_buffer: &[u8]) -> Result<Self> {
+        Err(Error::DecompressorNotImplementedError)
     }
 
     /// Todo: Port from libarchive:
     /// https://github.com/libarchive/libarchive/blob/master/libarchive/archive_read_support_filter_lzop.c
     #[cfg(feature = "db_lzo")]
-    fn try_from_buffer_lzop(buffer: &[u8]) -> Result<Self> {
-        todo!()
+    fn try_from_buffer_lzop(_buffer: &[u8]) -> Result<Self> {
+        Err(Error::DecompressorNotImplementedError)
     }
 
     /// Todo: Port from libarchive:
     /// https://github.com/libarchive/libarchive/blob/master/libarchive/archive_read_support_filter_compress.c
     #[cfg(feature = "db_Z")]
-    fn try_from_buffer_lzw(buffer: &[u8]) -> Result<Self> {
-        todo!()
+    fn try_from_buffer_lzw(_buffer: &[u8]) -> Result<Self> {
+        Err(Error::DecompressorNotImplementedError)
     }
 
     #[cfg(feature = "db_lz4")]
@@ -501,8 +500,8 @@ impl Db {
 
     /// Todo: Add lzip support to lzma-rs
     #[cfg(feature = "db_lz")]
-    fn try_from_buffer_lzip(buffer: &[u8]) -> Result<Self> {
-        todo!()
+    fn try_from_buffer_lzip(_buffer: &[u8]) -> Result<Self> {
+        Err(Error::DecompressorNotImplementedError)
     }
 
     fn try_from_buffer_any(buffer: &[u8]) -> Result<Self> {

@@ -36,7 +36,7 @@ version = "0.13.1"
 optional = true
 
 [features]
-default = ["db_bz2", "db_gz", "db_lz4", "db_xz", "db_zst"]
+default = ["db_bz2", "db_gz", "db_lrz", "db_lz", "db_lz4", "db_lzo", "db_xz", "db_Z", "db_zst"]
 db_bz2 = ["bzip2"]
 db_gz = ["flate2"]
 db_lrz = []
