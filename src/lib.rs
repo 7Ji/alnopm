@@ -76,7 +76,29 @@ pub enum Error {
     Base64DecodeError(base64::DecodeError),
     PkgbuildRsError(pkgbuild::Error),
     LzmaError(lzma_rs::error::Error),
-    DecompressorNotImplementedError,
+    DecompressorNotImplemented(&'static str),
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::IoError(e) => write!(f, "IO Error: {}", e),
+            Error::BrokenDB => write!(f, "Broken DB"),
+            Error::DuplicatedDB => write!(f, "Duplicated DB"),
+            Error::ParseIntError(e) 
+                => write!(f, "Parse Int Error: {}", e),
+            Error::FromHexError(e) 
+                => write!(f, "From Hex Error: {}", e),
+            Error::Base64DecodeError(e) 
+                => write!(f, "Base64 Decode Error: {}", e),
+            Error::PkgbuildRsError(e) 
+                => write!(f, "PKGBUILD-rs Error: {}", e),
+            Error::LzmaError(e) 
+                => write!(f, "LZMA Error: {}", e),
+            Error::DecompressorNotImplemented(decompressor) 
+                => write!(f, "Decompressor '{}' Not Implemented", decompressor),
+        }
+    }
 }
 
 macro_rules! impl_from_error {
@@ -463,21 +485,21 @@ impl Db {
     /// https://github.com/libarchive/libarchive/blob/master/libarchive/archive_read_support_filter_lrzip.c
     #[cfg(feature = "db_lrz")]
     fn try_from_buffer_lrzip(_buffer: &[u8]) -> Result<Self> {
-        Err(Error::DecompressorNotImplementedError)
+        Err(Error::DecompressorNotImplemented(".lrz (lrzip)"))
     }
 
     /// Todo: Port from libarchive:
     /// https://github.com/libarchive/libarchive/blob/master/libarchive/archive_read_support_filter_lzop.c
     #[cfg(feature = "db_lzo")]
     fn try_from_buffer_lzop(_buffer: &[u8]) -> Result<Self> {
-        Err(Error::DecompressorNotImplementedError)
+        Err(Error::DecompressorNotImplemented(".lzo (lzop)"))
     }
 
     /// Todo: Port from libarchive:
     /// https://github.com/libarchive/libarchive/blob/master/libarchive/archive_read_support_filter_compress.c
     #[cfg(feature = "db_Z")]
     fn try_from_buffer_lzw(_buffer: &[u8]) -> Result<Self> {
-        Err(Error::DecompressorNotImplementedError)
+        Err(Error::DecompressorNotImplemented(".Z (LZW)"))
     }
 
     #[cfg(feature = "db_lz4")]
@@ -501,7 +523,7 @@ impl Db {
     /// Todo: Add lzip support to lzma-rs
     #[cfg(feature = "db_lz")]
     fn try_from_buffer_lzip(_buffer: &[u8]) -> Result<Self> {
-        Err(Error::DecompressorNotImplementedError)
+        Err(Error::DecompressorNotImplemented(".lz (lzip)"))
     }
 
     fn try_from_buffer_any(buffer: &[u8]) -> Result<Self> {
