@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::{read_dir, File}, io::{BufReader, Read, Seek}, os::unix::raw::time_t, path::{Path, PathBuf}};
+use std::{collections::HashMap, fs::{read_dir, File}, io::{BufReader, Read}, path::Path};
 
 use base64::Engine;
 use hex::FromHex;
@@ -74,7 +74,7 @@ pub enum Error {
     FromHexError(hex::FromHexError),
     Base64DecodeError(base64::DecodeError),
     PkgbuildRsError(pkgbuild::Error),
-    LzmaError(lzma_rs::error::Error),
+    LzmaError(lzma_rs::error::Error)
 }
 
 macro_rules! impl_from_error {
@@ -92,6 +92,7 @@ impl_from_error!(std::num::ParseIntError, ParseIntError);
 impl_from_error!(hex::FromHexError, FromHexError);
 impl_from_error!(base64::DecodeError, Base64DecodeError);
 impl_from_error!(pkgbuild::Error, PkgbuildRsError);
+#[cfg(feature = "db_xz")]
 impl_from_error!(lzma_rs::error::Error, LzmaError);
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -314,6 +315,7 @@ const MAGIC_ZSTD: [u8; 4] = [0x28, 0xb5, 0x2f, 0xfd];
 const MAGIC_LRZIP: [u8; 4] = [0x4c, 0x52, 0x5a, 0x49]; // LRZI
 const MAGIC_LZOP: [u8; 4] = [0x89, 0x4c, 0x5a, 0x4f]; // 0x89 + LZO
 const MAGIC_LZW: [u8; 2] = [0x1f, 0x9d];
+#[cfg(feature = "db_lz4")]
 const MAGIC_LZ4: [u8; 4] = [0x04, 0x22, 0x4d, 0x18]; 
 const MAGIC_LZIP: [u8; 4] = [0x4c, 0x5a, 0x49, 0x50]; // LZIP
 const MAGIC_TAR_PREFIX: [u8; 5] = [0x75, 0x73, 0x74, 0x61, 0x72]; // "ustar"
@@ -463,8 +465,22 @@ impl Db {
         todo!()
     }
 
+    #[cfg(feature = "db_lz4")]
     fn try_from_buffer_lz4(buffer: &[u8]) -> Result<Self> {
-        todo!()
+        // LZ4 minimum size is 20 (header)
+        let mut decoder = 
+            lz4_flex::frame::FrameDecoder::new(buffer);
+        let mut new_buffer = Vec::new();
+        match decoder.read_to_end(&mut new_buffer) {
+            Ok(size) => {
+                log::debug!("Decompressed {} bytes from .lz4", size);
+                Self::try_from_buffer_tar(&new_buffer)
+            },
+            Err(e) => {
+                log::error!("Failed to decompress lz4: {}", e);
+                Err(e.into())
+            },
+        }
     }
 
     fn try_from_buffer_lzip(buffer: &[u8]) -> Result<Self> {
@@ -497,6 +513,7 @@ impl Db {
             if buffer[0..4] == MAGIC_LZOP {
                 return Self::try_from_buffer_lzop(buffer)
             }
+            #[cfg(feature = "db_lz4")]
             if buffer[0..4] == MAGIC_LZ4 {
                 return Self::try_from_buffer_lz4(buffer)
             }

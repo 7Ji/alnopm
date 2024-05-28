@@ -17,6 +17,10 @@ optional = true
 version = "1.0"
 optional = true
 
+[dependencies.lz4_flex]
+version = "0.11"
+optional = true
+
 [dependencies.lzma-rs]
 version = "0.3"
 optional = true
@@ -32,9 +36,10 @@ version = "0.13.1"
 optional = true
 
 [features]
-default = ["db_bz2", "db_gz", "db_xz", "db_zst"]
+default = ["db_bz2", "db_gz", "db_lz4", "db_xz", "db_zst"]
 db_bz2 = ["bzip2"]
 db_gz = ["flate2"]
+db_lz4= ["lz4_flex"]
 db_xz = ["lzma-rs"]
 db_zst = ["zstd"]
 
