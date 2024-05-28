@@ -1,10 +1,10 @@
-use std::{collections::HashMap, fs::{read_dir, File}, io::{BufReader, Read}, path::Path};
+use std::{collections::HashMap, default, fs::{read_dir, File}, io::{BufReader, Read}, path::Path};
 
 use base64::Engine;
 use hex::FromHex;
 use pkgbuild::{Architecture, CheckDependency, Conflict, Dependency, MakeDependency, Md5sum, OptionalDependency, PlainVersion, Provide, Replace, Sha256sum};
 
-#[derive(Default, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Package {
     pub filename: String,
     pub name: String,
@@ -31,8 +31,9 @@ pub struct Package {
     pub checkdepends: Vec<CheckDependency>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 enum PackageParsingState {
+    #[default]
     None,
     FileName,
     Name,
@@ -59,7 +60,7 @@ enum PackageParsingState {
     CheckDepends,
 }
 
-#[derive(Default, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Db {
     // pub name: String,
     pub packages: Vec<Package>,
@@ -567,7 +568,7 @@ impl Db {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Dbs {
     pub dbs: HashMap<String, Db>
 }
