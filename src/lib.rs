@@ -312,11 +312,15 @@ const MAGIC_BZIP2: [u8; 3] = [0x42, 0x5a, 0x68]; // BZh
 const MAGIC_XZ: [u8; 6] = [0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]; // 0xfd + 7zXZ + \0
 #[cfg(feature = "db_zst")]
 const MAGIC_ZSTD: [u8; 4] = [0x28, 0xb5, 0x2f, 0xfd]; 
+#[cfg(feature = "db_lrz")]
 const MAGIC_LRZIP: [u8; 4] = [0x4c, 0x52, 0x5a, 0x49]; // LRZI
+#[cfg(feature = "db_lzo")]
 const MAGIC_LZOP: [u8; 4] = [0x89, 0x4c, 0x5a, 0x4f]; // 0x89 + LZO
+#[cfg(feature = "db_Z")]
 const MAGIC_LZW: [u8; 2] = [0x1f, 0x9d];
 #[cfg(feature = "db_lz4")]
 const MAGIC_LZ4: [u8; 4] = [0x04, 0x22, 0x4d, 0x18]; 
+#[cfg(feature = "db_lz")]
 const MAGIC_LZIP: [u8; 4] = [0x4c, 0x5a, 0x49, 0x50]; // LZIP
 const MAGIC_TAR_PREFIX: [u8; 5] = [0x75, 0x73, 0x74, 0x61, 0x72]; // "ustar"
 const MAGIC_TAR_SUFFIX_BSD: [u8; 3] = [0x00, 0x30, 0x30]; // "\0""00"
@@ -453,14 +457,17 @@ impl Db {
         }
     }
 
+    #[cfg(feature = "db_lrz")]
     fn try_from_buffer_lrzip(buffer: &[u8]) -> Result<Self> {
         todo!()
     }
 
+    #[cfg(feature = "db_lzo")]
     fn try_from_buffer_lzop(buffer: &[u8]) -> Result<Self> {
         todo!()
     }
 
+    #[cfg(feature = "db_Z")]
     fn try_from_buffer_lzw(buffer: &[u8]) -> Result<Self> {
         todo!()
     }
@@ -483,6 +490,7 @@ impl Db {
         }
     }
 
+    #[cfg(feature = "db_lz")]
     fn try_from_buffer_lzip(buffer: &[u8]) -> Result<Self> {
         todo!()
     }
@@ -507,9 +515,11 @@ impl Db {
             if buffer[0..4] == MAGIC_ZSTD {
                 return Self::try_from_buffer_zstd(buffer)
             } 
+            #[cfg(feature = "db_lrz")]
             if buffer[0..4] == MAGIC_LRZIP {
                 return Self::try_from_buffer_lrzip(buffer)
             }
+            #[cfg(feature = "db_lzo")]
             if buffer[0..4] == MAGIC_LZOP {
                 return Self::try_from_buffer_lzop(buffer)
             }
@@ -517,6 +527,7 @@ impl Db {
             if buffer[0..4] == MAGIC_LZ4 {
                 return Self::try_from_buffer_lz4(buffer)
             }
+            #[cfg(feature = "db_lz")]
             if buffer[0..4] == MAGIC_LZIP {
                 return Self::try_from_buffer_lzip(buffer)
             }
@@ -532,6 +543,7 @@ impl Db {
             if buffer[0..2] == MAGIC_GZIP {
                 return Self::try_from_buffer_gzip(buffer)
             }
+            #[cfg(feature = "db_Z")]
             if buffer[0..2] == MAGIC_LZW {
                 return Self::try_from_buffer_lzw(buffer)
             }

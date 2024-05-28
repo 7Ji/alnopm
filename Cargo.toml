@@ -39,8 +39,12 @@ optional = true
 default = ["db_bz2", "db_gz", "db_lz4", "db_xz", "db_zst"]
 db_bz2 = ["bzip2"]
 db_gz = ["flate2"]
-db_lz4= ["lz4_flex"]
+db_lrz = []
+db_lz = []
+db_lz4 = ["lz4_flex"]
+db_lzo = []
 db_xz = ["lzma-rs"]
+db_Z = []
 db_zst = ["zstd"]
 
 [[example]]
