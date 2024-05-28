@@ -7,7 +7,7 @@ By not linking with libalpm, alnopm could parse Arch repo DBs on any platform, a
 The reason I wrote this is that I want a library that only parses Arch repo DBs and do not bring a whole libalpm dependency chain.
 
 ## License
-**git-mirrorer**, to mirror, archive and checkout git repos even across submodules
+**alnopm**, parsing Arch Linux repo DB files, without alpm dependency. 
 
 Copyright (C) 2024-present Guoxin "7Ji" Pu
 
