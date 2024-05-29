@@ -50,3 +50,7 @@ db_zst = ["zstd"]
 [[example]]
 name = "dump"
 path = "examples/dump.rs"
+
+[[example]]
+name = "provides"
+path = "examples/provides.rs"
