@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::{read_dir, File}, io::{BufReader, Read}, path::Path};
+use std::{collections::HashMap, fs::{read_dir, File}, io::{BufRead, BufReader, Read, Seek}, path::Path};
 
 use base64::Engine;
 use hex::FromHex;
@@ -394,8 +394,62 @@ fn is_buffer_tar(buffer: &[u8]) -> bool {
     }
 }
 
+fn seek_get_position_checked<S: Seek>(mut stream: S) -> Result<u64> {
+    stream.stream_position().map_err(|e| {
+        log::error!("Failed to get current possition: {}", e);
+        e.into()
+    })
+}
+
+/// Figure out whether the reader corresponds to a tar from current offset.
+/// 
+/// The offset would be reset to the value same as before the routine.
+fn is_reader_tar<R: Read + Seek>(mut reader: R) -> Result<bool> {
+    let position = seek_get_position_checked(&mut reader)?;
+    let mut buffer = [0; 512];
+    let r = match reader.read(&mut buffer) {
+        Ok(size) => {
+            if size >= 512 &&  buffer[257..262] == MAGIC_TAR_PREFIX &&
+                (buffer[262..265] == MAGIC_TAR_SUFFIX_BSD ||
+                 buffer[262..265] == MAGIC_TAR_SUFFIX_GNU) 
+            {
+                match tar::Archive::new(&mut reader).entries() {
+                    Ok(_) => Ok(true),
+                    Err(e) => {
+                        log::warn!("Failed to parse tar entries: {}. \
+                            Buffer is probably not tar", e);
+                        Ok(false)
+                    }
+                }
+            } else { // Shorter than a single tar header
+                Ok(false)
+            }
+        },
+        Err(e) => {
+            log::error!("Failed to read buffer to figure out reader is tar or \
+                not: {}", e);
+            Err(e.into())
+        },
+    };
+    match reader.seek(std::io::SeekFrom::Start(position)) {
+        Ok(new_position) => {
+            if new_position != position {
+                log::error!("Reader for tar was not reset to the initial seek \
+                    offset: current {} != original {}", new_position, position);
+                Err(Error::IoError("Incomplete seek".into()))
+            } else {
+                r
+            }
+        },
+        Err(e) => {
+            log::error!("Failed to seek back: {}", e);
+            Err(e.into())
+        },
+    }
+}
+
 impl Db {
-    fn try_from_buffer_tar(buffer: &[u8]) -> Result<Self> {
+    fn try_from_bufreader_tar(buffer: &[u8]) -> Result<Self> {
         let mut archive = tar::Archive::new(buffer);
         let entries = match archive.entries() {
             Ok(entries) => entries,
@@ -541,7 +595,10 @@ impl Db {
         Err(Error::DecompressorNotImplemented(".lz (lzip)"))
     }
 
-    fn try_from_buffer_any(buffer: &[u8]) -> Result<Self> {
+    fn try_from_bufreader_any<B: BufRead + Seek>(reader: B) -> Result<Self> {
+        if is_reader_tar(&mut reader)? {
+
+        }
         if is_buffer_tar(buffer) {
             if let Ok(db) = Self::try_from_buffer_tar(buffer) {
                 return Ok(db)
@@ -599,8 +656,12 @@ impl Db {
         Err(Error::BrokenDB)
     }
 
+    fn try_from_reader_any<R: Read + Seek>(reader: R) -> Result<Self> {
+        Self::try_from_bufreader_any(BufReader::new(reader))
+    }
+
     pub fn try_from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
-        Self::try_from_buffer_any(&buffer_try_from_path(path)?)
+        Self::try_from_reader_any(file_try_from_path(path)?)
     }
 }
 
