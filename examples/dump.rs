@@ -9,7 +9,7 @@ fn main() {
         has_db = true;
     }
     if ! has_db {
-        for db in Dbs::try_from_path("/var/lib/pacman/sync").expect("Failed to read all DBs").dbs {
+        for db in Dbs::try_from_path("/var/lib/pacman/sync").expect("Failed to read all DBs").map {
             println!("DB {}: {:?}", db.0, db.1)
         }
     }

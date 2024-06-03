@@ -52,5 +52,9 @@ name = "dump"
 path = "examples/dump.rs"
 
 [[example]]
+name = "hashstat"
+path = "examples/hashstat.rs"
+
+[[example]]
 name = "provides"
 path = "examples/provides.rs"

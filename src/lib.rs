@@ -14,8 +14,8 @@ pub struct Package {
     pub groups: Vec<String>,
     pub csize: usize, // Download / Compressed size
     pub isize: usize, // Installation size
-    pub md5sum: Md5sum, // Shouldn't really be used after https://gitlab.archlinux.org/pacman/pacman/-/commit/310bf878fcdebbb34c4d68afa37e338c2ad34499
-    pub sha256sum: Sha256sum,
+    pub md5sum: Option<Md5sum>, // Shouldn't really be used after https://gitlab.archlinux.org/pacman/pacman/-/commit/310bf878fcdebbb34c4d68afa37e338c2ad34499
+    pub sha256sum: Option<Sha256sum>,
     pub pgpsig: Vec<u8>,
     pub url: String,
     pub license: Vec<String>,
@@ -208,7 +208,7 @@ impl Package {
             macro_rules! fill_hash {
                 ($value: ident) => {{
                     match FromHex::from_hex(line) {
-                        Ok($value) => package.$value = $value,
+                        Ok($value) => package.$value = Some($value),
                         Err(e) => {
                             log::error!("Failed to parse {} from hex: {}", 
                                 stringify!($value), e);
@@ -606,7 +606,7 @@ impl Db {
 
 #[derive(Clone, Debug, Default)]
 pub struct Dbs {
-    pub dbs: HashMap<String, Db>
+    pub map: HashMap<String, Db>
 }
 
 impl Dbs {
@@ -650,7 +650,7 @@ impl Dbs {
             let name= String::from_utf8_lossy(name_raw).into_owned();
             log::info!("Adding DB {}", name);
             let db = Db::try_from_path(entry.path())?;
-            if dbs.dbs.insert(name, db).is_some() {
+            if dbs.map.insert(name, db).is_some() {
                 log::error!("Duplicated DB '{}'", 
                     String::from_utf8_lossy(name_raw));
                 return Err(Error::DuplicatedDB)
