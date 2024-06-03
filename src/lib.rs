@@ -15,7 +15,7 @@ pub struct Package {
     pub csize: usize, // Download / Compressed size
     pub isize: usize, // Installation size
     pub md5sum: Option<Md5sum>, // Shouldn't really be used after https://gitlab.archlinux.org/pacman/pacman/-/commit/310bf878fcdebbb34c4d68afa37e338c2ad34499
-    pub sha256sum: Option<Sha256sum>,
+    pub sha256sum: Sha256sum,
     pub pgpsig: Vec<u8>,
     pub url: String,
     pub license: Vec<String>,
@@ -70,6 +70,8 @@ pub struct Db {
 pub enum Error {
     /// Collapsed IO Error
     IoError(String), 
+    /// Broken package, 0: name, 1: bad field
+    BrokenPackage(String, &'static str),
     BrokenDB,
     DuplicatedDB,
     ParseIntError(std::num::ParseIntError),
@@ -88,6 +90,8 @@ impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::IoError(e) => write!(f, "IO Error: {}", e),
+            Error::BrokenPackage(package, field)
+                => write!(f, "Broken pacakge {} field {}", package, field),
             Error::BrokenDB => write!(f, "Broken DB"),
             Error::DuplicatedDB => write!(f, "Duplicated DB"),
             Error::ParseIntError(e) 
@@ -163,12 +167,38 @@ fn buffer_try_from_path<P: AsRef<Path>>(path: P) -> Result<Vec<u8>> {
     buffer_try_from_reader(&mut file_try_from_path(path)?)
 }
 
+#[derive(Default)]
+struct PackageValueState {
+    sha256sum: bool,
+    version: bool
+}
+
 impl Package {
+    fn verify(&self, value_state: &PackageValueState) -> Result<()> {
+        let field = if self.filename.is_empty() {
+            "FILENAME"
+        } else if self.name.is_empty() {
+            "NAME"
+        } else if self.base.is_empty() {
+            "BASE"
+        } else if ! value_state.version {
+            "VERSION"
+        } else if self.csize == 0 {
+            "CSIZE"
+        } else if ! value_state.sha256sum {
+            "SHA256SUM"
+        } else {
+            return Ok(())
+        };
+        Err(Error::BrokenPackage(self.name.clone(), field))
+    }
+
     fn try_from_buffer(buffer: &[u8]) -> Result<Self> {
         let mut package = Self::default();
         let mut state = PackageParsingState::None;
         let mut state_record = 
             [false; PackageParsingState::CheckDepends as usize + 1];
+        let mut value_state = PackageValueState::default();
         for line in buffer.split(|byte| *byte == b'\n') {
             if line.is_empty() {
                 state = PackageParsingState::None;
@@ -203,18 +233,6 @@ impl Package {
                         },
                     };
                     package.$value = $value
-                }};
-            }
-            macro_rules! fill_hash {
-                ($value: ident) => {{
-                    match FromHex::from_hex(line) {
-                        Ok($value) => package.$value = Some($value),
-                        Err(e) => {
-                            log::error!("Failed to parse {} from hex: {}", 
-                                stringify!($value), e);
-                            return Err(e.into())
-                        },
-                    }
                 }};
             }
             match state {
@@ -276,15 +294,35 @@ impl Package {
                         log::error!("Duplicated version {:?}", version);
                         return Err(Error::BrokenDB)
                     }
-                    package.version = line.into()
+                    package.version = line.into();
+                    value_state.version = true
                 },
                 PackageParsingState::Desc => fill_string!(desc),
                 PackageParsingState::Groups =>
                     package.groups.push(String::from_utf8_lossy(line).into()),
                 PackageParsingState::CSize => fill_num!(csize, usize),
                 PackageParsingState::ISize => fill_num!(isize, usize),
-                PackageParsingState::Md5Sum => fill_hash!(md5sum),
-                PackageParsingState::Sha256Sum => fill_hash!(sha256sum),
+                PackageParsingState::Md5Sum => 
+                    match FromHex::from_hex(line) {
+                        Ok(md5sum) => package.md5sum = Some(md5sum),
+                        Err(e) => {
+                            log::error!(
+                                "Failed to parse md5sum from hex: {}", e);
+                            return Err(e.into())
+                        },
+                    },
+                PackageParsingState::Sha256Sum => 
+                    match FromHex::from_hex(line) {
+                        Ok(sha256sum) => {
+                            package.sha256sum = sha256sum;
+                            value_state.sha256sum = true
+                        },
+                        Err(e) => {
+                            log::error!(
+                                "Failed to parse sha256sum from hex: {}", e);
+                            return Err(e.into())
+                        },
+                    },
                 PackageParsingState::PgpSig => {
                     if ! package.pgpsig.is_empty() {
                         log::error!("Duplicated PGP signature: {}", 
@@ -331,6 +369,7 @@ impl Package {
                     package.checkdepends.push(CheckDependency::from(line)),
             }
         }
+        package.verify(&value_state)?;
         Ok(package)
     }
 
