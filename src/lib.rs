@@ -174,13 +174,11 @@ struct PackageValueState {
 }
 
 impl Package {
-    fn verify(&self, value_state: &PackageValueState) -> Result<()> {
+    fn verify(&mut self, value_state: &PackageValueState) -> Result<()> {
         let field = if self.filename.is_empty() {
             "FILENAME"
         } else if self.name.is_empty() {
             "NAME"
-        } else if self.base.is_empty() {
-            "BASE"
         } else if ! value_state.version {
             "VERSION"
         } else if self.csize == 0 {
@@ -188,6 +186,9 @@ impl Package {
         } else if ! value_state.sha256sum {
             "SHA256SUM"
         } else {
+            if self.base.is_empty() {
+                self.base = self.name.clone();
+            }
             return Ok(())
         };
         Err(Error::BrokenPackage(self.name.clone(), field))

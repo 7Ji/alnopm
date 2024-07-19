@@ -4,7 +4,13 @@ fn main() {
     let args = std::env::args();
     let mut has_db = false;
     for db_name in args.skip(1) {
-        let db = Db::try_from_path(&db_name).expect("Failed to read DB");
+        let db = match Db::try_from_path(&db_name) {
+            Ok(db) => db,
+            Err(e) => {
+                print!("Failed to parse DB, error: {}", e);
+                panic!()
+            },
+        };
         println!("DB {}: {:?}", db_name, db);
         has_db = true;
     }
